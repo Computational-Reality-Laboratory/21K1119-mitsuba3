@@ -28,5 +28,3 @@ __pycache__
 /docs/src/quickstart
 /docs/src/generated
 /docs/resources
-ext/drjit/
-ext/pybind11/
