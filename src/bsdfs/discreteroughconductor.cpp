@@ -6,11 +6,14 @@
 #include <mitsuba/render/microfacet.h>
 #include <mitsuba/render/texture.h>
 
+#include <cmath>
+
 NAMESPACE_BEGIN(mitsuba)
 
 /**!
 .. _bsdf-roughconductor:
 
+このプログラムはroughconductorのコピーを基に作っている。
 Rough conductor material (:monosp:`roughconductor`)
 ---------------------------------------------------
 
@@ -221,6 +224,42 @@ public:
         callback->put_object("eta", m_eta.get(), ParamFlags::Differentiable | ParamFlags::Discontinuous);
         callback->put_object("k",   m_k.get(),   ParamFlags::Differentiable | ParamFlags::Discontinuous);
     }
+
+    // Jakob2014のプログラム-------------------------------------------------------------------------
+
+    // 式(9)の行列Cを求める関数
+    bool equation9(const Vector3f wi, const Vector3f wo,
+                        const float gamma, const Vector3f m) {
+        Vector3f x_hat = dr::normalize(dr::cross(wi, wo));
+        Vector3f y_hat = dr::normalize(wi - wo);
+        Vector3f z_hat = dr::normalize(wi + wo);
+
+        // gammaは度数なのでラジアンに直す
+        float g_cos = std::cosf(gamma * (M_PI / 180.0f));
+        float lambda1 = (dr::dot(wi, wo) + g_cos) / (1 - g_cos);
+        float lambda2 = powf(1 / std::tanf((gamma / 2) * (M_PI / 180.0f)), 2.0f);
+        
+        Matrix3f Q = (x_hat.x, y_hat.x, z_hat.x,
+                    x_hat.y, y_hat.y, z_hat.y,
+                    x_hat.z, y_hat.z, z_hat.z);
+
+        Matrix3f Lambda = (lambda1, 0, 0,
+                    0, lambda2, 0,
+                    0, 0, -1.0f);
+
+        Matrix3f C = dr::matmul(dr::matmul(Q, Lambda), Q.T);
+        
+        float result = dr::matmul(dr::matmul(m, C), m);
+
+        if(result <= 0) {
+            return true;
+        } 
+        else {
+            return false;
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
 
     std::pair<BSDFSample3f, Spectrum> sample(const BSDFContext &ctx,
                                              const SurfaceInteraction3f &si,
