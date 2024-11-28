@@ -226,30 +226,42 @@ public:
     }
 
     // Jakob2014のプログラム-------------------------------------------------------------------------
+    
+    dr::Array<float, 3> vecmatmul(dr::Array<float, 3> vec, dr::Matrix<float, 3> mat) {
+        dr::Array<float, 3> result;
+        result[0] = vec[0] * mat[0][0];
+        return result;
+    }
 
     // 式(9)の行列Cを求める関数
-    bool equation9(const Vector3f wi, const Vector3f wo,
-                        const float gamma, const Vector3f m) {
-        Vector3f x_hat = dr::normalize(dr::cross(wi, wo));
-        Vector3f y_hat = dr::normalize(wi - wo);
-        Vector3f z_hat = dr::normalize(wi + wo);
+    bool equation9(dr::Array<float, 3> wi, dr::Array<float, 3> wo,
+                    float gamma, dr::Array<float, 3> m) {
+
+
+        dr::Array<float, 3> x_hat = dr::normalize(dr::cross(wi, wo));
+        dr::Array<float, 3> y_hat = dr::normalize(wi - wo);
+        dr::Array<float, 3> z_hat = dr::normalize(wi + wo);
 
         // gammaは度数なのでラジアンに直す
         float g_cos = std::cosf(gamma * (M_PI / 180.0f));
-        float lambda1 = (dr::dot(wi, wo) + g_cos) / (1 - g_cos);
+        float lambda1 = (dr::dot(wi, wo) + g_cos) / (1.0f - g_cos);
         float lambda2 = powf(1 / std::tanf((gamma / 2) * (M_PI / 180.0f)), 2.0f);
-        
-        Matrix3f Q = (x_hat.x, y_hat.x, z_hat.x,
-                    x_hat.y, y_hat.y, z_hat.y,
-                    x_hat.z, y_hat.z, z_hat.z);
 
-        Matrix3f Lambda = (lambda1, 0, 0,
-                    0, lambda2, 0,
-                    0, 0, -1.0f);
+        dr::Matrix<float, 3> Q = (x_hat[0], y_hat[0], z_hat[0],
+                                x_hat[1], y_hat[1], z_hat[1],
+                                x_hat[2], y_hat[2], z_hat[2]);
 
-        Matrix3f C = dr::matmul(dr::matmul(Q, Lambda), Q.T);
         
-        float result = dr::matmul(dr::matmul(m, C), m);
+
+        dr::Matrix<float, 3> Lambda = (lambda1, 0, 0,
+                                    0, lambda2, 0,
+                                    0, 0, -1.0f);
+        
+        dr::Matrix<float, 3> C = Q * Lambda * dr::transpose(Q);
+        
+        // float result = dr::matmul(dr::matmul(m, C), m);
+        float result = (m * C * m);
+        // float result = dr::dot((m * C), m);
 
         if(result <= 0) {
             return true;
