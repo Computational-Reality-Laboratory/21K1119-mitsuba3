@@ -227,9 +227,14 @@ public:
 
     // Jakob2014のプログラム-------------------------------------------------------------------------
     
+    // ベクトルと行列の積を計算する関数
     dr::Array<float, 3> vecmatmul(dr::Array<float, 3> vec, dr::Matrix<float, 3> mat) {
         dr::Array<float, 3> result;
-        result[0] = vec[0] * mat[0][0];
+        for(int i = 0; i < 3; i++){
+            for(int j = 0; j < 3; j++){
+                result[i] = result[i] + vec[j] * mat[j][i];
+            }
+        }
         return result;
     }
 
@@ -250,7 +255,6 @@ public:
         dr::Matrix<float, 3> Q = (x_hat[0], y_hat[0], z_hat[0],
                                 x_hat[1], y_hat[1], z_hat[1],
                                 x_hat[2], y_hat[2], z_hat[2]);
-
         
 
         dr::Matrix<float, 3> Lambda = (lambda1, 0, 0,
@@ -259,9 +263,7 @@ public:
         
         dr::Matrix<float, 3> C = Q * Lambda * dr::transpose(Q);
         
-        // float result = dr::matmul(dr::matmul(m, C), m);
-        float result = (m * C * m);
-        // float result = dr::dot((m * C), m);
+        float result = dr::dot(vecmatmul(m, C), m);
 
         if(result <= 0) {
             return true;
