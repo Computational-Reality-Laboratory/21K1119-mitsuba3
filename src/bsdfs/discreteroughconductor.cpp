@@ -7,6 +7,7 @@
 #include <mitsuba/render/texture.h>
 
 #include <cmath>
+#include <queue>
 
 NAMESPACE_BEGIN(mitsuba)
 
@@ -156,6 +157,123 @@ In *polarized* rendering modes, the material automatically switches to a polariz
 implementation of the underlying Fresnel equations.
 
  */
+
+
+// テスクチャ空間上の正方形を表すクラス
+class MySquare {
+    public:
+        // 正方形の左上の座標
+        float x1, y1;
+        // 正方形の右下の座標
+        float x2, y2;
+        // 正方形の辺の長さ
+        float width;
+        // 正方形の面積
+        float area;
+
+        // コンストラクタ
+        MySquare(float X1, float Y1, float X2, float Y2) : x1(X1), y1(Y1), x2(X2), y2(Y2) {
+            width = std::abs(x1 - x2);
+            area = width * width;
+        }
+
+        // 面積を定義したコンストラクタ
+        MySquare(float X1, float Y1, float X2, float Y2, float Area) : x1(X1), y1(Y1), x2(X2), y2(Y2), area(Area) {
+            width = std::abs(x1 - x2);
+        }
+
+        // 入力がない時のコンストラクタ
+        MySquare() : x1(0.0f), y1(0.0f), x2(1.0f), y2(1.0f) {
+            width = 1.0f;
+            area = 1.0f;
+        }
+
+        
+        // 正方形を４つの子に分割する関数
+        MySquare* split() {
+            MySquare result[4];
+
+            // 左上の子
+            result[0] = MySquare(x1, y1, x1 + width/2, y1 + width/2, area/4);
+            // 右上の子
+            result[1] = MySquare(x1 + width/2, y1, x2, y1 + width/2, area/4);
+            // 左下の子
+            result[2] = MySquare(x1, y1 + width/2, x1 + width/2, y2, area/4);
+            // 右下の子
+            result[3] = MySquare(x1 + width/2, y1 + width/2, x2, y2, area/4);
+
+            return result;
+        }
+};
+// ------------------------------------------------------------
+
+// 方向領域の球面上にある三角形のクラス
+class MySpheTri {
+    public:
+        // 各頂点の方向ベクトル
+        dr::Array<float, 3> w1;
+        dr::Array<float, 3> w2;
+        dr::Array<float, 3> w3;
+        // 三角形の面積
+        float area;
+
+        // コンストラクタ
+        MySpheTri(dr::Array<float, 3> W1, dr::Array<float, 3> W2, dr::Array<float, 3> W3, float Area) : w1(W1), w2(W2), w3(W3), area(Area) {}
+
+        // 入力がない時のコンストラクタ
+        MySpheTri() {
+            dr::Array<float, 3> tmp(0.0f, 0.0f, 0.0f);
+            w1 = tmp;
+            w2 = tmp;
+            w3 = tmp;
+            area = 0.0f; 
+        }
+
+        // 三角形の面積を求める関数（ハッシュテーブルから値を参照する）
+        // float area()
+
+        // 球面上にある三角形を４つの子に分割
+        MySpheTri* split() {
+            MySpheTri result[4];
+
+            // 頂点w1を含む子
+            result[0] = MySpheTri(w1, (w1 + w2)/2, (w1 + w3)/2, area/4);
+            // 頂点w2を含む子
+            result[1] = MySpheTri((w2 + w1)/2, w2, (w2 + w3)/2, area/4);
+            // 中点のみで構成される子
+            result[2] = MySpheTri((w2 + w3)/2, (w1 + w2)/2, (w3 + w1)/2, area/4);
+            // 頂点w3を含む子
+            result[3] = MySpheTri((w3 + w1)/2, (w3 + w2)/2, w3, area/4);
+
+            return result;
+        }
+
+};
+// ----------------------------------------------------------------------
+
+// nodeを表すクラス
+class MyNode {
+    public:
+        MySquare squ;
+        MySpheTri tri;
+        int num_particle;
+        float vol;
+
+        // 正方形と三角形が与えられた場合のコンストラクタ
+        MyNode(MySquare Square, MySpheTri Triangle, int N_Particle) : squ(Square), tri(Triangle), num_particle(N_Particle) {
+            vol = squ.area * tri.area;
+        }
+
+        // 入力がない時のコンストラクタ
+        MyNode() {
+            squ = MySquare();
+            tri = MySpheTri();
+            num_particle = 0;
+            vol = 0.0;
+        }
+
+};
+// -----------------------------------------------------------------------------------
 
 template <typename Float, typename Spectrum>
 class DiscreteRoughConductor final : public BSDF<Float, Spectrum> {
