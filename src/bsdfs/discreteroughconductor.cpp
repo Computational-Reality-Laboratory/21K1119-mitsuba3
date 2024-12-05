@@ -275,6 +275,70 @@ class MyNode {
 };
 // -----------------------------------------------------------------------------------
 
+// 平行四辺形の
+class MyParallelogram {
+    public:
+        float x1, x2, x3, x4;
+        float y1, y2, y3, y4;
+        
+        // コンストラクタ
+        MyParallelogram(float X1, float Y1, float X2, float Y2, float X3, float Y3, float X4, float Y4) : 
+        x2(0.0f), y2(0.0f), x3(0.0f), y3(0.0f), x4(0.0f), y4(0.0f) {
+            // x座標が一番小さい頂点を(x1, y1)にする
+            // 初期値は(x1, y1)=(X1, Y1)
+            x1 = X1;
+            y1 = Y1;
+            float Vs[4][2] = {{X1, Y1}, {X2, Y2}, {X3, Y3}, {X4, Y4}};
+            // x座標が一番小さい頂点のインデックス
+            int idx_minX = 0;
+
+            for(int i=1; i < 4; i++) {
+                x1 = x1 <= Vs[i][0] ? x1 : Vs[i][0];
+                y1 = x1 <= Vs[i][0] ? y1 : Vs[i][1];
+                idx_minX = x1 <= Vs[i][0] ? idx_minX : i;
+            }
+
+            // x座標が１番小さい頂点を基準に、頂点を反時計回りにソートする
+            for(int i = 0; i < 4; i++) {
+                if(i = idx_minX) {continue;}
+                
+                else {
+
+                }
+            }
+            
+
+        }
+        
+        // 入力がない時のコンストラクタ
+        MyParallelogram() : x1(0.0f), y1(0.0f), x2(0.0f), y2(0.0f), x3(0.0f), y3(0.0f), x4(0.0f), y4(0.0f) {}
+
+        // 正方形との交差を判定（正方形内部に平行四辺形の頂点があればTrue）
+        bool isIntersect(MySquare squ) {
+            bool result = false;
+
+            // 正方形が存在する範囲
+            float minX = squ.x1 < squ.x2 ? squ.x1 : squ.x2;
+            float maxX = squ.x1 > squ.x2 ? squ.x1 : squ.x2;
+            float minY = squ.y1 < squ.y2 ? squ.y1 : squ.y2;
+            float maxY = squ.y1 > squ.y2 ? squ.y1 : squ.y2;
+
+            // 平行四辺形の各頂点
+            float V[4][2] = {{x1, y1}, {x2, y2}, {x3, y3}, {x4, y4}};
+
+
+            // 平行四辺形の頂点のうち正方形の内部に存在するものがあれば、交差するとしてtrueを返す
+            for (int i = 0; i < 4; i++) {
+                if((minX <= V[i][0]) && (V[i][0] <= maxX) && (minY <= V[i][1]) && (V[i][1] <= maxY)) {
+                    result = true;
+                    break;
+                }
+            }
+
+            return result;
+        }
+};
+
 template <typename Float, typename Spectrum>
 class DiscreteRoughConductor final : public BSDF<Float, Spectrum> {
 public:
