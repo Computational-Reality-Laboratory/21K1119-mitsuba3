@@ -205,7 +205,7 @@ class MySquare {
             return result;
         }
 };
-// ------------------------------------------------------------
+// ------------------------------------------------------------l
 
 // 方向領域の球面上にある三角形のクラス
 class MySpheTri {
@@ -216,9 +216,13 @@ class MySpheTri {
         dr::Array<float, 3> w3;
         // 三角形の面積
         float area;
+        // 三角形の中点
+        dr::Array<float, 3> center;
 
         // コンストラクタ
-        MySpheTri(dr::Array<float, 3> W1, dr::Array<float, 3> W2, dr::Array<float, 3> W3, float Area) : w1(W1), w2(W2), w3(W3), area(Area) {}
+        MySpheTri(dr::Array<float, 3> W1, dr::Array<float, 3> W2, dr::Array<float, 3> W3, float Area) : w1(W1), w2(W2), w3(W3), area(Area) {
+            center = (w1 + w2 + w3) / 3;
+        }
 
         // 入力がない時のコンストラクタ
         MySpheTri() {
@@ -227,6 +231,7 @@ class MySpheTri {
             w2 = tmp;
             w3 = tmp;
             area = 0.0f; 
+            center = tmp;
         }
 
         // 三角形の面積を求める関数（ハッシュテーブルから値を参照する）
@@ -281,33 +286,82 @@ class MyParallelogram {
         float x1, x2, x3, x4;
         float y1, y2, y3, y4;
         
-        // コンストラクタ
+        /*コンストラクタ
+        v1→v2→v3→v4→v1の順で反時計回りになるように頂点の順番を入れ替える*/ 
         MyParallelogram(float X1, float Y1, float X2, float Y2, float X3, float Y3, float X4, float Y4) : 
-        x2(0.0f), y2(0.0f), x3(0.0f), y3(0.0f), x4(0.0f), y4(0.0f) {
-            // x座標が一番小さい頂点を(x1, y1)にする
+        x1(X1), y1(Y1), x2(X2), y2(Y2), x3(X3), y3(Y3), x4(X4), y4(Y4) {
             // 初期値は(x1, y1)=(X1, Y1)
             x1 = X1;
             y1 = Y1;
+            int idx_minY = 0;
             float Vs[4][2] = {{X1, Y1}, {X2, Y2}, {X3, Y3}, {X4, Y4}};
-            // x座標が一番小さい頂点のインデックス
-            int idx_minX = 0;
 
+            // y座標が一番小さい頂点を(x1, y1)にする
             for(int i=1; i < 4; i++) {
-                x1 = x1 <= Vs[i][0] ? x1 : Vs[i][0];
-                y1 = x1 <= Vs[i][0] ? y1 : Vs[i][1];
-                idx_minX = x1 <= Vs[i][0] ? idx_minX : i;
+                x1 = y1 <= Vs[i][1] ? x1 : Vs[i][0];
+                y1 = y1 <= Vs[i][1] ? y1 : Vs[i][1];
+                idx_minY = y1 <= Vs[i][1] ? idx_minY : i;
             }
 
-            // x座標が１番小さい頂点を基準に、頂点を反時計回りにソートする
-            for(int i = 0; i < 4; i++) {
-                if(i = idx_minX) {continue;}
-                
-                else {
+            // (x1, y1)を基準にしたcosの値が大きい順で並び替えて反時計回りになるようにする
+            float list_cos[3] = {};
+            int list_idx[3] = {};
+            int n_idx = 0;
 
+            // 各頂点でのcosの値とVsの添字を記録する
+            for (int i = 0; i < 4; i++) {
+                // x1, y1自身はスキップ
+                if(i == idx_minY) {
+                    continue;
+                }
+
+                else {
+                    list_cos[n_idx] = (Vs[i][0] - x1) / (dr::hypot(Vs[i][0] - x1, Vs[i][1] - y1));
+                    list_idx[n_idx] = i;
+                    n_idx++;
                 }
             }
-            
 
+            // 配列の0番目と1番目のcosの大きさを比較し1番目の方が大きいなら入れ替え
+            if(list_cos[0] < list_cos[1]) {
+                float tmpf = list_cos[0];
+                int tmpi = list_idx[0];
+                list_cos[0] = list_cos[1];
+                list_idx[0] = list_idx[1];
+                list_cos[1] = tmpf;
+                list_idx[1] = tmpi;
+            }
+
+            // 配列の0番目と2番目のcosの大きさを比較し2番目の方が大きいなら入れ替え
+            if(list_cos[0] < list_cos[2]) {
+                float tmpf = list_cos[2];
+                int tmpi = list_idx[2];
+                list_cos[2] = list_cos[1];
+                list_idx[2] = list_idx[1];
+                list_cos[1] = list_cos[0];
+                list_idx[1] = list_idx[0];
+                list_cos[0] = tmpf;
+                list_idx[0] = tmpi;
+            }
+
+            // 配列の1番目と2番目のcosの大きさを比較し2番目の方が大きいなら入れ替え
+            else if(list_cos[1] < list_cos[2]) {
+                float tmpf = list_cos[2];
+                int tmpi = list_idx[2];
+                list_cos[2] = list_cos[1];
+                list_idx[2] = list_idx[1];
+                list_cos[1] = tmpf;
+                list_idx[1] = tmpi;
+            }
+
+            // 並び替えた順番で頂点の座標を代入
+            x2 = Vs[list_idx[0]][0];
+            y2 = Vs[list_idx[0]][1];
+            x3 = Vs[list_idx[1]][0];
+            y3 = Vs[list_idx[1]][1];
+            x4 = Vs[list_idx[2]][0];
+            y4 = Vs[list_idx[2]][1];
+            
         }
         
         // 入力がない時のコンストラクタ
@@ -336,6 +390,23 @@ class MyParallelogram {
             }
 
             return result;
+        }
+
+        // ある点が平行四辺形の中にあるか判定
+        bool isPointIn(float vx, float vy) {
+            // 与えられた点を基準に平行四辺形の各頂点をベクトルにする
+            dr::Array<float, 2> vec1 = (x1 - vx, y1 - vy);
+            dr::Array<float, 2> vec2 = (x2 - vx, y2 - vy);
+            dr::Array<float, 2> vec3 = (x3 - vx, y3 - vy);
+            dr::Array<float, 2> vec4 = (x4 - vx, y4 - vy);            
+
+            // 外積の計算結果の正負
+            bool isPlus12 = (vec1[0] * vec2[1] - vec1[1] * vec2[0]) > 0.0f;
+            bool isPlus23 = (vec2[0] * vec3[1] - vec2[1] * vec3[0]) > 0.0f;
+            bool isPlus34 = (vec3[0] * vec4[1] - vec3[1] * vec4[0]) > 0.0f;
+            bool isPlus41 = (vec4[0] * vec1[1] - vec4[1] * vec1[0]) > 0.0f;
+            
+            return (isPlus12 == isPlus23) && (isPlus23 == isPlus34) && (isPlus34 == isPlus41);
         }
 };
 
