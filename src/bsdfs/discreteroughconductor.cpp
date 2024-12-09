@@ -410,6 +410,75 @@ class MyParallelogram {
         }
 };
 
+// -------------------------------------------------------------------------------------------------------
+
+class MyConicsection {
+    public:
+        // 立体角の中心の方向
+        dr::Array<float, 3> wo;
+        // 立体角の半径（単位は度、ラジアンではない）
+        float gamma;
+
+        // コンストラクタ
+        MyConicsection(dr::Array<float, 3> Wo, float Gamma) : wo(Wo), gamma(Gamma) {}
+
+        MyConicsection() : gamma(0.0f) {
+            dr::Array<float, 3> tmp(0.0f, 0.0f, 0.0f);
+            wo = tmp;
+        }
+
+        // Jakob2014にある式(9)の行列Cを求める関数
+        bool Jakob_equation9(dr::Array<float, 3> wi, dr::Array<float, 3> m) {
+
+
+            dr::Array<float, 3> x_hat = dr::normalize(dr::cross(wi, wo));
+            dr::Array<float, 3> y_hat = dr::normalize(wi - wo);
+            dr::Array<float, 3> z_hat = dr::normalize(wi + wo);
+
+            // cos(gamma)の値（gammaは度数なのでラジアンに直す）
+            float g_cos = std::cosf(gamma * (M_PI / 180.0f));
+            // 式(9)のλ1
+            float lambda1 = (dr::dot(wi, wo) + g_cos) / (1.0f - g_cos);
+            // 式(9)のλ2
+            float lambda2 = powf(1 / std::tanf((gamma / 2) * (M_PI / 180.0f)), 2.0f);
+
+            dr::Matrix<float, 3> Q = (x_hat[0], y_hat[0], z_hat[0],
+                                    x_hat[1], y_hat[1], z_hat[1],
+                                    x_hat[2], y_hat[2], z_hat[2]);
+            
+
+            dr::Matrix<float, 3> Lambda = (lambda1, 0, 0,
+                                        0, lambda2, 0,
+                                        0, 0, -1.0f);
+            
+            dr::Matrix<float, 3> C = Q * Lambda * dr::transpose(Q);
+            
+            float result = dr::dot(vecmatmul(m, C), m);
+
+            if(result <= 0) {
+                return true;
+            } 
+            else {
+                return false;
+            }
+    }
+};
+
+// ベクトルと行列の積を計算する関数
+    dr::Array<float, 3> vecmatmul(dr::Array<float, 3> vec, dr::Matrix<float, 3> mat) {
+        dr::Array<float, 3> result;
+        for(int i = 0; i < 3; i++){
+            for(int j = 0; j < 3; j++){
+                result[i] = result[i] + vec[j] * mat[j][i];
+            }
+        }
+        return result;
+    }
+
+
+
+// ----------------------------------------------------------------------------------------
+
 template <typename Float, typename Spectrum>
 class DiscreteRoughConductor final : public BSDF<Float, Spectrum> {
 public:
@@ -480,51 +549,7 @@ public:
 
     // Jakob2014のプログラム-------------------------------------------------------------------------
     
-    // ベクトルと行列の積を計算する関数
-    dr::Array<float, 3> vecmatmul(dr::Array<float, 3> vec, dr::Matrix<float, 3> mat) {
-        dr::Array<float, 3> result;
-        for(int i = 0; i < 3; i++){
-            for(int j = 0; j < 3; j++){
-                result[i] = result[i] + vec[j] * mat[j][i];
-            }
-        }
-        return result;
-    }
-
-    // 式(9)の行列Cを求める関数
-    bool equation9(dr::Array<float, 3> wi, dr::Array<float, 3> wo,
-                    float gamma, dr::Array<float, 3> m) {
-
-
-        dr::Array<float, 3> x_hat = dr::normalize(dr::cross(wi, wo));
-        dr::Array<float, 3> y_hat = dr::normalize(wi - wo);
-        dr::Array<float, 3> z_hat = dr::normalize(wi + wo);
-
-        // gammaは度数なのでラジアンに直す
-        float g_cos = std::cosf(gamma * (M_PI / 180.0f));
-        float lambda1 = (dr::dot(wi, wo) + g_cos) / (1.0f - g_cos);
-        float lambda2 = powf(1 / std::tanf((gamma / 2) * (M_PI / 180.0f)), 2.0f);
-
-        dr::Matrix<float, 3> Q = (x_hat[0], y_hat[0], z_hat[0],
-                                x_hat[1], y_hat[1], z_hat[1],
-                                x_hat[2], y_hat[2], z_hat[2]);
-        
-
-        dr::Matrix<float, 3> Lambda = (lambda1, 0, 0,
-                                    0, lambda2, 0,
-                                    0, 0, -1.0f);
-        
-        dr::Matrix<float, 3> C = Q * Lambda * dr::transpose(Q);
-        
-        float result = dr::dot(vecmatmul(m, C), m);
-
-        if(result <= 0) {
-            return true;
-        } 
-        else {
-            return false;
-        }
-    }
+    
 
     // ---------------------------------------------------------------------------------------------
 
